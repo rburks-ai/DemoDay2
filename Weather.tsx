@@ -1,0 +1,249 @@
+import React, { useState, useEffect } from 'react';
+import { Cloud, CloudRain, Sun, Wind, Droplets, Eye, Gauge, CloudSnow, CloudDrizzle, Cloudy, MapPin, Calendar } from 'lucide-react';
+
+export default function WeatherApp() {
+  const [city, setCity] = useState('');
+  const [weather, setWeather] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Free API key from WeatherAPI.com - no credit card required
+  const API_KEY = 'c93aa961341c478391d55747252910';
+
+  const getWeatherIcon = (condition, isDay) => {
+    const size = 120;
+    const code = condition?.code || 1000;
+    
+    // Clear
+    if (code === 1000) {
+      return isDay ? 
+        <Sun size={size} className="text-yellow-400 drop-shadow-lg" strokeWidth={1.5} /> :
+        <div className="text-6xl">🌙</div>;
+    }
+    // Partly cloudy
+    if ([1003].includes(code)) {
+      return <Cloudy size={size} className="text-gray-300 drop-shadow-lg" strokeWidth={1.5} />;
+    }
+    // Cloudy/Overcast
+    if ([1006, 1009].includes(code)) {
+      return <Cloud size={size} className="text-gray-400 drop-shadow-lg" strokeWidth={1.5} />;
+    }
+    // Rain
+    if ([1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(code)) {
+      return <CloudRain size={size} className="text-blue-400 drop-shadow-lg" strokeWidth={1.5} />;
+    }
+    // Drizzle
+    if ([1072, 1168, 1171].includes(code)) {
+      return <CloudDrizzle size={size} className="text-blue-300 drop-shadow-lg" strokeWidth={1.5} />;
+    }
+    // Snow
+    if ([1066, 1114, 1117, 1210, 1213, 1216, 1219, 1222, 1225, 1255, 1258].includes(code)) {
+      return <CloudSnow size={size} className="text-blue-100 drop-shadow-lg" strokeWidth={1.5} />;
+    }
+    
+    return <Cloud size={size} className="text-gray-300 drop-shadow-lg" strokeWidth={1.5} />;
+  };
+
+  const fetchWeather = async (searchCity) => {
+    if (!searchCity.trim()) {
+      setError('Please enter a city name');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${searchCity}&aqi=no`
+      );
+
+      if (!response.ok) {
+        if (response.status === 400) {
+          throw new Error('City not found');
+        }
+        throw new Error('Failed to fetch weather data');
+      }
+
+      const data = await response.json();
+      setWeather(data);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+      setWeather(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = () => {
+    fetchWeather(city);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  useEffect(() => {
+    fetchWeather('London');
+  }, []);
+
+  const getBackgroundGradient = () => {
+    if (!weather) return 'from-blue-400 via-blue-500 to-blue-600';
+    
+    const isDay = weather.current.is_day === 1;
+    const code = weather.current.condition.code;
+    
+    // Clear day
+    if (code === 1000 && isDay) return 'from-sky-400 via-blue-400 to-blue-500';
+    // Clear night
+    if (code === 1000 && !isDay) return 'from-indigo-900 via-purple-900 to-slate-900';
+    // Cloudy
+    if ([1003, 1006, 1009].includes(code)) return 'from-gray-400 via-gray-500 to-gray-600';
+    // Rainy
+    if ([1063, 1150, 1153, 1180, 1183, 1186, 1189, 1192, 1195, 1240, 1243, 1246].includes(code)) {
+      return 'from-slate-600 via-slate-700 to-slate-800';
+    }
+    // Snowy
+    if ([1066, 1114, 1117, 1210, 1213, 1216, 1219, 1222, 1225, 1255, 1258].includes(code)) {
+      return 'from-blue-200 via-blue-300 to-blue-400';
+    }
+    
+    return 'from-blue-400 via-blue-500 to-blue-600';
+  };
+
+  return (
+    <div className={`min-h-screen bg-gradient-to-br ${getBackgroundGradient()} p-4 flex items-center justify-center transition-all duration-1000`}>
+      <div className="w-full max-w-2xl">
+        <div className="backdrop-blur-xl bg-white/20 rounded-3xl shadow-2xl p-8 border border-white/30">
+          <h1 className="text-4xl font-bold text-center mb-8 text-white drop-shadow-lg">
+            ☁️ Weather Forecast
+          </h1>
+
+          <div className="mb-8">
+            <div className="relative">
+              <input
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Search for a city..."
+                className="w-full px-6 py-4 pr-32 backdrop-blur-xl bg-white/30 border-2 border-white/50 rounded-2xl focus:outline-none focus:border-white text-white placeholder-white/70 text-lg font-medium shadow-lg transition-all"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="absolute right-2 top-2 px-6 py-2 bg-white/90 hover:bg-white text-gray-800 rounded-xl font-semibold disabled:bg-white/50 transition-all shadow-md"
+              >
+                {loading ? '⏳' : '🔍'}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="backdrop-blur-xl bg-red-500/30 border-2 border-red-300/50 text-white px-6 py-4 rounded-2xl mb-6 font-medium shadow-lg">
+              ⚠️ {error}
+            </div>
+          )}
+
+          {weather && !error && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="backdrop-blur-xl bg-white/20 rounded-2xl p-8 border border-white/30 shadow-xl">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <MapPin className="text-white" size={24} />
+                  <h2 className="text-3xl font-bold text-white drop-shadow-lg">
+                    {weather.location.name}, {weather.location.country}
+                  </h2>
+                </div>
+                
+                <div className="flex items-center justify-center gap-3 mb-6 text-white/80">
+                  <Calendar size={18} />
+                  <p className="text-lg">{weather.location.localtime}</p>
+                </div>
+
+                <div className="flex items-center justify-center mb-4">
+                  {getWeatherIcon(weather.current.condition, weather.current.is_day)}
+                </div>
+
+                <p className="text-7xl font-bold text-center text-white mb-2 drop-shadow-lg">
+                  {Math.round(weather.current.temp_c)}°C
+                </p>
+                <p className="text-2xl text-center text-white/90 capitalize font-medium">
+                  {weather.current.condition.text}
+                </p>
+                <p className="text-lg text-center text-white/70 mt-2">
+                  Feels like {Math.round(weather.current.feelslike_c)}°C
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="backdrop-blur-xl bg-white/20 rounded-2xl p-6 border border-white/30 shadow-xl hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Droplets className="text-white" size={32} />
+                    <div>
+                      <p className="text-sm text-white/70 font-medium">Humidity</p>
+                      <p className="text-3xl font-bold text-white">{weather.current.humidity}%</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="backdrop-blur-xl bg-white/20 rounded-2xl p-6 border border-white/30 shadow-xl hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Wind className="text-white" size={32} />
+                    <div>
+                      <p className="text-sm text-white/70 font-medium">Wind Speed</p>
+                      <p className="text-3xl font-bold text-white">{weather.current.wind_kph} km/h</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="backdrop-blur-xl bg-white/20 rounded-2xl p-6 border border-white/30 shadow-xl hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Gauge className="text-white" size={32} />
+                    <div>
+                      <p className="text-sm text-white/70 font-medium">Pressure</p>
+                      <p className="text-3xl font-bold text-white">{weather.current.pressure_mb} mb</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="backdrop-blur-xl bg-white/20 rounded-2xl p-6 border border-white/30 shadow-xl hover:scale-105 transition-transform">
+                  <div className="flex items-center gap-3 mb-3">
+                    <Eye className="text-white" size={32} />
+                    <div>
+                      <p className="text-sm text-white/70 font-medium">Visibility</p>
+                      <p className="text-3xl font-bold text-white">{weather.current.vis_km} km</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="backdrop-blur-xl bg-gradient-to-r from-white/25 to-white/15 rounded-2xl p-6 border border-white/30 shadow-xl">
+                <div className="grid grid-cols-3 gap-6 text-center">
+                  <div>
+                    <p className="text-sm text-white/70 font-medium mb-2">UV Index</p>
+                    <p className="text-3xl font-bold text-white">{weather.current.uv}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/70 font-medium mb-2">Wind Direction</p>
+                    <p className="text-3xl font-bold text-white">{weather.current.wind_dir}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-white/70 font-medium mb-2">Precipitation</p>
+                    <p className="text-3xl font-bold text-white">{weather.current.precip_mm} mm</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-white/90 text-sm mt-6 font-medium drop-shadow">
+          Powered by WeatherAPI.com
+        </p>
+      </div>
+    </div>
+  );
+}
