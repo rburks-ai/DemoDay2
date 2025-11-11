@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Master - Todo App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes slideIn {
+            from { 
+                opacity: 0; 
+                transform: translateX(-20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateX(0); 
+            }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .slide-in { animation: slideIn 0.3s ease-out; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        .bounce { animation: bounce 0.5s ease-in-out; }
+        .glass {
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+        .task-complete {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        let state = {
+            tasks: [],
+            inputValue: '',
+            filter: 'all' // all, active, completed
+        };
+
+        // Load tasks from memory
+        function loadTasks() {
+            const saved = {};
+            state.tasks = saved.tasks || [];
+        }
+
+        // Save tasks to memory
+        function saveTasks() {
+            // Tasks persist only during the session
+        }
+
+        function addTask() {
+            if (!state.inputValue.trim()) return;
+            
+            const newTask = {
+                id: Date.now(),
+                text: state.inputValue.trim(),
+                completed: false,
+                createdAt: new Date().toLocaleString()
+            };
+            
+            state.tasks.unshift(newTask);
+            state.inputValue = '';
+            saveTasks();
+            render();
+        }
+
+        function toggleTask(id) {
+            const task = state.tasks.find(t => t.id === id);
+            if (task) {
+                task.completed = !task.completed;
+                saveTasks();
+                render();
+            }
+        }
+
+        function deleteTask(id) {
+            state.tasks = state.tasks.filter(t => t.id !== id);
+            saveTasks();
+            render();
+        }
+
+        function clearCompleted() {
+            state.tasks = state.tasks.filter(t => !t.completed);
+            saveTasks();
+            render();
+        }
+
+        function getFilteredTasks() {
+            if (state.filter === 'active') {
+                return state.tasks.filter(t => !t.completed);
+            }
+            if (state.filter === 'completed') {
+                return state.tasks.filter(t => t.completed);
+            }
+            return state.tasks;
+        }
+
+        function getStats() {
+            const total = state.tasks.length;
+            const completed = state.tasks.filter(t => t.completed).length;
+            const active = total - completed;
+            return { total, completed, active };
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            const filteredTasks = getFilteredTasks();
+            const stats = getStats();
+            
+            app.innerHTML = `
+                <div class="min-h-screen bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 p-4">
+                    <div class="max-w-3xl mx-auto py-8">
+                        <!-- Header -->
+                        <div class="text-center mb-8 fade-in">
+                            <h1 class="text-6xl font-bold text-white mb-2 drop-shadow-lg">
+                                ✓ Task Master
+                            </h1>
+                            <p class="text-white/90 text-lg">Stay organized, stay productive</p>
+                        </div>
+
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-3 gap-4 mb-8 fade-in">
+                            <div class="glass bg-white/20 rounded-2xl p-4 border border-white/30 text-center">
+                                <p class="text-white/70 text-sm font-medium mb-1">Total</p>
+                                <p class="text-4xl font-bold text-white">${stats.total}</p>
+                            </div>
+                            <div class="glass bg-white/20 rounded-2xl p-4 border border-white/30 text-center">
+                                <p class="text-white/70 text-sm font-medium mb-1">Active</p>
+                                <p class="text-4xl font-bold text-yellow-300">${stats.active}</p>
+                            </div>
+                            <div class="glass bg-white/20 rounded-2xl p-4 border border-white/30 text-center">
+                                <p class="text-white/70 text-sm font-medium mb-1">Done</p>
+                                <p class="text-4xl font-bold text-green-300">${stats.completed}</p>
+                            </div>
+                        </div>
+
+                        <!-- Input Section -->
+                        <div class="glass bg-white/20 rounded-3xl p-6 border border-white/30 shadow-2xl mb-6">
+                            <div class="flex gap-3">
+                                <input
+                                    type="text"
+                                    id="taskInput"
+                                    value="${state.inputValue}"
+                                    placeholder="What needs to be done?"
+                                    class="flex-1 px-6 py-4 glass bg-white/30 border-2 border-white/50 rounded-2xl focus:outline-none focus:border-white text-white placeholder-white/70 text-lg font-medium"
+                                />
+                                <button
+                                    id="addBtn"
+                                    class="px-8 py-4 bg-white text-purple-600 rounded-2xl font-bold text-lg hover:bg-white/90 transition-all shadow-lg hover:scale-105"
+                                >
+                                    ➕ Add
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Filter Buttons -->
+                        <div class="flex gap-3 mb-6 justify-center">
+                            <button
+                                id="filterAll"
+                                class="px-6 py-2 rounded-xl font-semibold transition-all ${state.filter === 'all' ? 'bg-white text-purple-600' : 'bg-white/20 text-white border border-white/30'}"
+                            >
+                                All
+                            </button>
+                            <button
+                                id="filterActive"
+                                class="px-6 py-2 rounded-xl font-semibold transition-all ${state.filter === 'active' ? 'bg-white text-purple-600' : 'bg-white/20 text-white border border-white/30'}"
+                            >
+                                Active
+                            </button>
+                            <button
+                                id="filterCompleted"
+                                class="px-6 py-2 rounded-xl font-semibold transition-all ${state.filter === 'completed' ? 'bg-white text-purple-600' : 'bg-white/20 text-white border border-white/30'}"
+                            >
+                                Completed
+                            </button>
+                        </div>
+
+                        <!-- Tasks List -->
+                        <div class="space-y-3 mb-6">
+                            ${filteredTasks.length === 0 ? `
+                                <div class="glass bg-white/10 rounded-2xl p-12 border border-white/20 text-center">
+                                    <div class="text-6xl mb-4">📝</div>
+                                    <p class="text-white/70 text-lg">
+                                        ${state.filter === 'completed' ? 'No completed tasks yet' : 
+                                          state.filter === 'active' ? 'No active tasks' : 
+                                          'No tasks yet. Add one to get started!'}
+                                    </p>
+                                </div>
+                            ` : filteredTasks.map(task => `
+                                <div class="glass bg-white/20 rounded-2xl p-5 border border-white/30 shadow-lg hover:bg-white/30 transition-all slide-in">
+                                    <div class="flex items-center gap-4">
+                                        <button
+                                            class="task-checkbox w-8 h-8 rounded-lg ${task.completed ? 'bg-green-400' : 'bg-white/30 border-2 border-white/50'} flex items-center justify-center hover:scale-110 transition-transform"
+                                            data-id="${task.id}"
+                                        >
+                                            ${task.completed ? '<span class="text-white text-xl">✓</span>' : ''}
+                                        </button>
+                                        <div class="flex-1">
+                                            <p class="text-white text-lg font-medium ${task.completed ? 'task-complete' : ''}">
+                                                ${task.text}
+                                            </p>
+                                            <p class="text-white/50 text-sm mt-1">${task.createdAt}</p>
+                                        </div>
+                                        <button
+                                            class="task-delete w-10 h-10 bg-red-400/80 hover:bg-red-500 rounded-xl flex items-center justify-center hover:scale-110 transition-all"
+                                            data-id="${task.id}"
+                                        >
+                                            <span class="text-white text-xl">🗑️</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+
+                        <!-- Clear Completed Button -->
+                        ${stats.completed > 0 ? `
+                            <div class="text-center">
+                                <button
+                                    id="clearCompleted"
+                                    class="px-8 py-3 bg-red-400/80 hover:bg-red-500 text-white rounded-2xl font-bold transition-all hover:scale-105 shadow-lg"
+                                >
+                                    🗑️ Clear Completed (${stats.completed})
+                                </button>
+                            </div>
+                        ` : ''}
+
+                        <!-- Footer -->
+                        <div class="text-center mt-8">
+                            <p class="text-white/70 text-sm">
+                                Double tap tasks to mark complete
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Attach event listeners
+            const input = document.getElementById('taskInput');
+            const addBtn = document.getElementById('addBtn');
+            const filterAll = document.getElementById('filterAll');
+            const filterActive = document.getElementById('filterActive');
+            const filterCompleted = document.getElementById('filterCompleted');
+            const clearCompletedBtn = document.getElementById('clearCompleted');
+            
+            if (input) {
+                input.addEventListener('input', (e) => {
+                    state.inputValue = e.target.value;
+                });
+                
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        addTask();
+                    }
+                });
+                
+                // Auto-focus input
+                input.focus();
+            }
+            
+            if (addBtn) {
+                addBtn.addEventListener('click', addTask);
+            }
+
+            if (filterAll) {
+                filterAll.addEventListener('click', () => {
+                    state.filter = 'all';
+                    render();
+                });
+            }
+
+            if (filterActive) {
+                filterActive.addEventListener('click', () => {
+                    state.filter = 'active';
+                    render();
+                });
+            }
+
+            if (filterCompleted) {
+                filterCompleted.addEventListener('click', () => {
+                    state.filter = 'completed';
+                    render();
+                });
+            }
+
+            if (clearCompletedBtn) {
+                clearCompletedBtn.addEventListener('click', clearCompleted);
+            }
+
+            // Task checkboxes
+            document.querySelectorAll('.task-checkbox').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    toggleTask(id);
+                });
+            });
+
+            // Delete buttons
+            document.querySelectorAll('.task-delete').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = parseInt(e.currentTarget.dataset.id);
+                    deleteTask(id);
+                });
+            });
+        }
+
+        // Initial load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadTasks();
+            render();
+        });
+    </script>
+</body>
+</html>
