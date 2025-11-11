@@ -1,0 +1,15 @@
+{
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
+```
+
+## **Your folder structure should be:**
+```
+your-project/
+├── index.html
+└── vercel.json
